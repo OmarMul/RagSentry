@@ -1,0 +1,34 @@
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ragsentry"
+version = "0.1.0"
+description = "Regression-testing and evaluation tool for RAG systems ('pytest for RAG')"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "RagSentry Team" }
+]
+dependencies = [
+    "pydantic>=2.0",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]
+postgres = [
+    "psycopg[binary]>=3.0",
+]
+
+[project.scripts]
+ragsentry = "ragsentry.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ragsentry*"]
