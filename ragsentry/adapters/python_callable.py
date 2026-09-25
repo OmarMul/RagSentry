@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib
 from typing import Any, Callable
+import os
+import sys
 
 from ragsentry.adapters.base import Adapter, AdapterResponse
 
@@ -29,7 +31,10 @@ class PythonCallableAdapter(Adapter):
             raise ValueError(
                 f"Invalid import string '{import_str}'. Expected format: 'package.module:function_name'"
             )
-        
+        cwd = os.getcwd()
+        if cwd not in sys.path:
+            sys.path.insert(0, cwd)
+            
         module_path, func_name = import_str.split(":", 1)
         module = importlib.import_module(module_path)
         target = getattr(module, func_name)

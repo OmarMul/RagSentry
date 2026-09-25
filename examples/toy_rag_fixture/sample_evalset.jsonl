@@ -1,1 +1,4 @@
-
+{"id": "q1", "question": "What is RagSentry?", "ground_truth": "RagSentry is a regression testing and evaluation tool for RAG systems."}
+{"id": "q2", "question": "How does RagSentry treat external RAG systems?", "ground_truth": "RagSentry uses adapters to treat external RAG systems as black boxes."}
+{"id": "q3", "question": "What metrics does RagSentry score answers with?", "ground_truth": "RagSentry scores answers using swappable judge models with RAGAS metrics."}
+{"id": "q4", "question": "What is the capital of France?", "ground_truth": "Paris"}
