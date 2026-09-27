@@ -121,6 +121,11 @@ def cli() -> None:
 )
 
 @click.option(
+    "--no-scoring",
+    is_flag=True,
+    help="Skip LLM judge scoring and only record raw generation and context outputs.",
+)
+@click.option(
     "--storage", "-s",
     default="local",
     help="Storage backend: 'local' (default) or 'postgresql://user:pass@host/db'.",
@@ -133,6 +138,7 @@ def run_command(
     answer_path: str,
     contexts_path: str,
     out: str,
+    no_scoring: bool,
     storage: str,
     judge_provider: str | None,
     judge_model: str | None,
@@ -143,7 +149,9 @@ def run_command(
     """Run an evaluation set through an adapter and persist results."""
     config: JudgeConfig | None = None
 
-    if judge_config:
+    if no_scoring:
+        config = None
+    elif judge_config:
         config = JudgeConfig.from_file(judge_config)
         if judge_provider:
             config.provider = judge_provider.lower()
