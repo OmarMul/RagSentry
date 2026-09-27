@@ -1,0 +1,4 @@
+{"id": "faq1", "question": "How do I install RagSentry?", "ground_truth": "Install with pip: pip install ragsentry"}
+{"id": "faq2", "question": "What metrics does RagSentry support?", "ground_truth": "RagSentry uses RAGAS metrics: faithfulness, answer relevancy, context precision, and context recall."}
+{"id": "faq3", "question": "How do I create an adapter for my RAG app?", "ground_truth": "Create a Python function with signature query(question: str) -> dict that returns answer and contexts."}
+{"id": "faq4", "question": "Can I use PostgreSQL for storage?", "ground_truth": "Yes, install ragsentry[postgres] and pass --storage postgresql://... to the CLI."}

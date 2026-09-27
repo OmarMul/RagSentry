@@ -13,6 +13,15 @@ if "langchain_community.chat_models.vertexai" not in sys.modules:
     _shim.ChatVertexAI = type("ChatVertexAI", (), {})
     sys.modules["langchain_community.chat_models.vertexai"] = _shim
 
+import logging
+# Filter out the benign OpenRouter/single-generation warning from RAGAS
+class _IgnoreSingleGenFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "generations instead of requested" not in record.getMessage()
+
+logging.getLogger("ragas.prompt.pydantic_prompt").addFilter(_IgnoreSingleGenFilter())
+logging.getLogger("ragas").addFilter(_IgnoreSingleGenFilter())
+
 from datasets import Dataset
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from ragas import evaluate

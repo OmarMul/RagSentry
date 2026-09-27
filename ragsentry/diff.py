@@ -186,7 +186,7 @@ def compare_runs(
     cand_summary = candidate.summary.get("average_scores", {})
     average_deltas: dict[str, dict[str, Any]] = {}
 
-
+    
     for m in all_metrics:
         b_avg = base_summary.get(m)
         c_avg = cand_summary.get(m)
@@ -201,7 +201,6 @@ def compare_runs(
         "counts": counts,
         "average_deltas": average_deltas,
     }
-    
     return RunDiff(
         baseline_run_id=baseline.run_id,
         candidate_run_id=candidate.run_id,

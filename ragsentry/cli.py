@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import click
+from pathlib import Path
 
 from ragsentry.adapters.base import Adapter
 from ragsentry.adapters.http import HttpAdapter
@@ -12,6 +13,11 @@ from ragsentry.runner import run_eval
 from ragsentry.storage.local_file import LocalFileRunStore
 from ragsentry.diff import compare_runs
 from ragsentry.report.console import format_diff_console
+from ragsentry.ci import evaluate_ci_gate
+from ragsentry.report.pr_comment import format_pr_comment
+from ragsentry.storage import get_run_store
+from ragsentry.storage.base import RunStore
+from ragsentry.storage.local_file import LocalFileRunStore
 
 
 
@@ -114,6 +120,12 @@ def cli() -> None:
     help="Path to judge model JSON configuration file.",
 )
 
+@click.option(
+    "--storage", "-s",
+    default="local",
+    help="Storage backend: 'local' (default) or 'postgresql://user:pass@host/db'.",
+)
+
 def run_command(
     evalset: str,
     adapter: str,
@@ -121,6 +133,7 @@ def run_command(
     answer_path: str,
     contexts_path: str,
     out: str,
+    storage: str,
     judge_provider: str | None,
     judge_model: str | None,
     api_key: str | None,
@@ -174,7 +187,7 @@ def run_command(
         judge_config=config,
     )
 
-    store = LocalFileRunStore(output_dir=out)
+    store = get_run_store(storage=storage, output_dir=out)
     saved_path = store.save(run_result)
     click.echo(f"[+] Evaluation complete! Run saved to: {saved_path}")
 
@@ -183,24 +196,192 @@ def run_command(
         for metric, score in run_result.summary["average_scores"].items():
             click.echo(f"  {metric}: {score}")
 
+
+
 @cli.command(name="diff")
-@click.argument("baseline", type=click.Path(exists=True))
-@click.argument("candidate", type=click.Path(exists=True))
+@click.argument("baseline")
+@click.argument("candidate")
 @click.option(
     "--tolerance",
     type=float,
     default=0.001,
     help="Tolerance threshold for considering a delta unchanged (default: 0.001).",
 )
-def diff_command(baseline: str, candidate: str, tolerance: float) -> None:
+@click.option(
+    "--storage", "-s",
+    default="local",
+    help="Storage backend: 'local' (default) or 'postgresql://user:pass@host/db'.",
+)
+def diff_command(baseline: str, candidate: str, tolerance: float, storage: str) -> None:
     """Compare two persisted evaluation runs and display score regressions/improvements."""
     click.echo(f"[*] Comparing baseline:  {baseline}")
     click.echo(f"[*] With candidate:      {candidate}")
 
-    diff = compare_runs(baseline, candidate, tolerance=tolerance)
+    store = get_run_store(storage=storage)
+    base_run = store.load(baseline)
+    cand_run = store.load(candidate)
+    diff = compare_runs(base_run, cand_run, tolerance=tolerance)
     report = format_diff_console(diff)
     click.echo("\n" + report)
 
+
+
+
+@cli.command(name="ci")
+@click.option(
+    "--candidate", "-c",
+    required=True,
+    help="Path to candidate evaluation run JSON file or Postgres run ID.",
+)
+@click.option(
+    "--baseline", "-b",
+    help="Path to baseline evaluation run JSON file or Postgres run ID (optional).",
+)
+@click.option(
+    "--threshold", "-t",
+    multiple=True,
+    help="Quality threshold (e.g. '-t faithfulness=0.8 -t answer_relevancy=0.7'). Can be repeated.",
+)
+@click.option(
+    "--max-regression",
+    type=float,
+    help="Maximum allowable drop in any average metric compared to baseline (e.g. 0.05).",
+)
+@click.option(
+    "--max-regressed-questions",
+    type=int,
+    default=0,
+    help="Maximum allowable count of regressed individual questions (default: 0).",
+)
+@click.option(
+    "--pr-comment-out",
+    type=click.Path(),
+    help="Output file path to save Markdown PR comment.",
+)
+@click.option(
+    "--storage", "-s",
+    default="local",
+    help="Storage backend: 'local' (default) or 'postgresql://user:pass@host/db'.",
+)
+
+def ci_command(
+    candidate: str,
+    baseline: str | None,
+    threshold: tuple[str, ...],
+    max_regression: float | None,
+    max_regressed_questions: int,
+    pr_comment_out: str | None,
+    storage: str,
+) -> None:
+    """Evaluate a run against fixed thresholds and baseline regression limits for CI/CD."""
+    click.echo("[*] Evaluating RagSentry CI Quality Gate...")
+    click.echo(f"  Candidate Run: {candidate}")
+    if baseline:
+        click.echo(f"  Baseline Run:  {baseline}")
+
+    gate_result = evaluate_ci_gate(
+        candidate=candidate,
+        baseline=baseline,
+        thresholds=list(threshold),
+        max_regression=max_regression,
+        max_regressed_questions=max_regressed_questions,
+        storage=storage,
+    )
+
+    # Format Markdown PR Comment
+    comment_md = format_pr_comment(gate_result)
+
+    if pr_comment_out:
+        out_path = Path(pr_comment_out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(comment_md, encoding="utf-8")
+        click.echo(f"[+] PR comment written to: {pr_comment_out}")
+
+    # Terminal output
+    if gate_result.passed:
+        click.echo("\n[+] SUCCESS: Quality gate PASSED!")
+    else:
+        click.echo("\n[-] FAILURE: Quality gate FAILED with violations:")
+        for v in gate_result.violations:
+            click.echo(f"    - {v}")
+
+    # Exit with code 0 on success, 1 on failure
+    if not gate_result.passed:
+        raise click.exceptions.Exit(code=1)
+
+
+@cli.command(name="init")
+@click.option(
+    "--directory", "-d",
+    default=".",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    help="Target directory to initialize (default: current directory).",
+)
+def init_command(directory: str) -> None:
+    """Initialize RagSentry in the target directory by scaffolding starter files."""
+    target_dir = Path(directory)
+    adapter_file = target_dir / "ragsentry_adapter.py"
+    evalset_file = target_dir / "evalset.jsonl"
+
+    click.echo("[*] Initializing RagSentry...")
+
+    # 1. Create starter adapter stub
+    if not adapter_file.exists():
+        adapter_code = '''"""
+RagSentry Adapter — Starter Stub
+Generated by `ragsentry init`
+
+Usage:
+    ragsentry run -e evalset.jsonl -a ragsentry_adapter:query
+"""
+from typing import Any
+
+
+def query(question: str) -> dict[str, Any]:
+    """
+    RagSentry adapter contract:
+    Takes a question string and returns a dict with:
+        - "answer": str
+        - "contexts": list[str]
+    """
+    # TODO: Replace with call to your RAG application
+    # Example:
+    #   result = my_rag_app.ask(question)
+    #   return {"answer": result.answer, "contexts": result.retrieved_docs}
+
+    return {
+        "answer": f"Sample response for question: '{question}'",
+        "contexts": [
+            "Sample context chunk 1 retrieved for query.",
+            "Sample context chunk 2 retrieved for query.",
+        ],
+    }
+
+
+if __name__ == "__main__":
+    res = query("Test question?")
+    print("Contract test succeeded:", res)
+'''
+        adapter_file.write_text(adapter_code, encoding="utf-8")
+        click.echo(f"  [+] Created starter adapter: {adapter_file}")
+    else:
+        click.echo(f"  [~] Adapter already exists: {adapter_file}")
+
+    # 2. Create starter eval set
+    if not evalset_file.exists():
+        evalset_content = '''{"id": "q1", "question": "What is RagSentry?", "ground_truth": "RagSentry is a regression-testing and evaluation CLI for RAG systems."}
+{"id": "q2", "question": "How do I run an evaluation?", "ground_truth": "Run `ragsentry run -e evalset.jsonl -a ragsentry_adapter:query`."}
+'''
+        evalset_file.write_text(evalset_content, encoding="utf-8")
+        click.echo(f"  [+] Created starter evalset: {evalset_file}")
+    else:
+        click.echo(f"  [~] Evalset already exists: {evalset_file}")
+
+    click.echo("\n[+] RagSentry initialization complete!")
+    click.echo("\nNext steps:")
+    click.echo("  1. Edit `ragsentry_adapter.py` to connect your RAG application.")
+    click.echo("  2. Run your first evaluation:")
+    click.echo("     ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring")
 
 
 def main() -> None:

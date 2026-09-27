@@ -9,25 +9,50 @@ RagSentry interacts with target RAG applications strictly as black boxes through
 ---
 
 ## 1. Python Callable Adapter
-Wraps any Python function returning `{ "answer": str, "contexts": list[str], "metadata"?: dict }`.
 
+Wraps any Python function returning a dictionary containing `"answer"` (a string) and `"contexts"` (a list of strings).
+
+### Requirements:
+- Function signature: `query(question: str) -> dict[str, Any]`
+- Required return keys:
+  - `"answer"`: `str`
+  - `"contexts"`: `list[str]` (retrieved text passages)
+- Optional return key:
+  - `"metadata"`: `dict` (traceability data, timestamps, etc.)
+
+### Example CLI usage:
 ```powershell
-ragsentry run -e evals.jsonl -a my_package.retriever:query
+ragsentry run -e evalset.jsonl -a my_package.retriever:query
 ```
 
-## 1. HTTP Adapter
-Points to any HTTP endpoint. Supports nested dotted paths (e.g. data.reply or result.sources) `{ "answer": str, "contexts": list[str], "metadata"?: dict }`.
+---
 
+## 2. HTTP Adapter
+
+Points to any HTTP POST endpoint. Extracts answer and contexts using configurable JSONPath or dotted key paths.
+
+### Requirements:
+- Accepts a JSON payload: `{"question": "..."}`
+- Returns a JSON response containing answer and contexts fields.
+
+### Example CLI usage:
 ```powershell
-ragsentry run -e evals.jsonl -a http://localhost:8000/api/chat \
+ragsentry run -e evalset.jsonl -a http://localhost:8000/api/chat \
   --answer-path "data.reply" \
   --contexts-path "data.retrieved_sources"
-
 ```
 
-## 1. Shell Adapter
-Executes any binary, CLI script, or container, piping the question via stdin or CLI argument and reading JSON from stdout `{ "answer": str, "contexts": list[str], "metadata"?: dict }`.
+---
 
+## 3. Shell Adapter
+
+Executes any binary, CLI script, or container, piping the question via `stdin` and reading JSON from `stdout`.
+
+### Requirements:
+- Receives the question string on standard input (`stdin`).
+- Writes a JSON object to standard output (`stdout`) matching `{ "answer": "...", "contexts": ["..."] }`.
+
+### Example CLI usage:
 ```powershell
-ragsentry run -e evals.jsonl -a "shell:python my_cli.py"
+ragsentry run -e evalset.jsonl -a "shell:python my_cli.py"
 ```
