@@ -18,6 +18,8 @@ from ragsentry.report.pr_comment import format_pr_comment
 from ragsentry.storage import get_run_store
 from ragsentry.storage.base import RunStore
 from ragsentry.storage.local_file import LocalFileRunStore
+from ragsentry.installer import install_skill
+
 
 
 
@@ -392,9 +394,96 @@ if __name__ == "__main__":
     click.echo("     ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring")
 
 
+@cli.command(name="install-skill")
+@click.option(
+    "--agent", "-a",
+    type=click.Choice(["agents", "antigravity", "gemini", "claude", "cursor", "windsurf"], case_sensitive=False),
+    default="agents",
+    help="Target coder agent platform (default: 'agents' -> .agents/skills/).",
+)
+@click.option(
+    "--target-dir", "-t",
+    type=click.Path(),
+    help="Explicit target directory path for the skill installation.",
+)
+@click.option(
+    "--global", "-g", "is_global",
+    is_flag=True,
+    help="Install globally into user home directory config instead of local workspace.",
+)
+@click.option(
+    "--force", "-f",
+    is_flag=True,
+    help="Overwrite existing skill installation if present.",
+)
+def install_skill_command(
+    agent: str,
+    target_dir: str | None,
+    is_global: bool,
+    force: bool,
+) -> None:
+    """Install the adapter-scaffolder agent skill for AI coder assistants."""
+    try:
+        installed_path = install_skill(
+            agent=agent,
+            target_dir=target_dir,
+            is_global=is_global,
+            force=force,
+        )
+        click.echo(f"[+] Successfully installed 'adapter-scaffolder' skill to: {installed_path}")
+        click.echo("\nYour AI coder agent can now use this skill to automatically inspect RAG codebases and scaffold RagSentry adapters.")
+    except Exception as e:
+        click.echo(f"[-] Error installing skill: {e}", err=True)
+        raise click.exceptions.Exit(code=1)
+
+
+@cli.group(name="skill")
+def skill_group() -> None:
+    """Manage RagSentry skills for coder agents."""
+    pass
+
+
+@skill_group.command(name="install")
+@click.option(
+    "--agent", "-a",
+    type=click.Choice(["agents", "antigravity", "gemini", "claude", "cursor", "windsurf"], case_sensitive=False),
+    default="agents",
+    help="Target coder agent platform (default: 'agents' -> .agents/skills/).",
+)
+@click.option(
+    "--target-dir", "-t",
+    type=click.Path(),
+    help="Explicit target directory path for the skill installation.",
+)
+@click.option(
+    "--global", "-g", "is_global",
+    is_flag=True,
+    help="Install globally into user home directory config instead of local workspace.",
+)
+@click.option(
+    "--force", "-f",
+    is_flag=True,
+    help="Overwrite existing skill installation if present.",
+)
+def skill_install_command(
+    agent: str,
+    target_dir: str | None,
+    is_global: bool,
+    force: bool,
+) -> None:
+    """Install the adapter-scaffolder agent skill for AI coder assistants."""
+    install_skill_command.callback(
+        agent=agent,
+        target_dir=target_dir,
+        is_global=is_global,
+        force=force,
+    )
+
+
 def main() -> None:
     cli()
 
 
 if __name__ == "__main__":
     main()
+

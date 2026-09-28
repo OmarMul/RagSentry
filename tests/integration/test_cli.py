@@ -39,3 +39,13 @@ def test_cli_run_command_no_scoring(tmp_path):
     )
     assert result.exit_code == 0, f"Command failed output: {result.output}"
     assert "Evaluation complete!" in result.output
+
+
+def test_cli_install_skill_command(tmp_path):
+    runner = CliRunner()
+    target_dir = tmp_path / "installed_skill"
+    result = runner.invoke(cli, ["install-skill", "--target-dir", str(target_dir)])
+    assert result.exit_code == 0
+    assert "Successfully installed 'adapter-scaffolder' skill" in result.output
+    assert (target_dir / "SKILL.md").exists()
+

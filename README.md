@@ -92,12 +92,34 @@ ragsentry ci \
 
 ---
 
+## 🤖 Install Adapter Scaffolder Skill for AI Coder Agents
+
+Have an AI coding assistant (Antigravity, Claude Code, Cursor, Windsurf)? Install the `adapter-scaffolder` skill into your agent's configuration with a single command:
+
+```bash
+# Install to local workspace (.agents/skills/adapter-scaffolder)
+ragsentry install-skill
+
+# Or install for specific agents:
+ragsentry install-skill --agent claude
+ragsentry install-skill --agent cursor
+ragsentry install-skill --agent windsurf
+
+# Global install across all workspace projects:
+ragsentry install-skill --global
+```
+
+See [Agent Skill Installation Guide](docs/agent-skill-installation.md) for full details.
+
+---
+
 ## 📖 Documentation & Guides
 
 - 📘 [Adapter Contract Guide](docs/adapter-contract.md)
 - 📙 [CI / CD Integration Guide](docs/ci-integration.md)
 - 📗 [Configuration Reference](docs/config-reference.md)
-- 📕 [Adapter Scaffolder Skill](skills/adapter-scaffolder/SKILL.md)
+- 💡 [Agent Skill Installation Guide](docs/agent-skill-installation.md)
+- 📕 [Adapter Scaffolder Skill Specification](skills/adapter-scaffolder/SKILL.md)
 
 ---
 
