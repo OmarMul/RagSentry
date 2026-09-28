@@ -49,17 +49,16 @@ an answer with retrieved contexts.
 
 2. **Search for retrieval patterns.** Look for common indicators:
    ```
-   # Search patterns (use grep/ripgrep):
-   - "retrieve"
-   - "search"  
-   - "query"
-   - "rag"
-   - "context"
-   - "vector"
-   - "embedding"
-   - "similarity"
-   - "chunk"
-   - "document"
+   retrieve
+   search
+   query
+   rag
+   context
+   vector
+   embedding
+   similarity
+   chunk
+   document
    ```
 
 3. **Trace the data flow.** Starting from the entry point, identify:
@@ -78,20 +77,20 @@ an answer with retrieved contexts.
    - Input: `question: str`
    - Return type: `dict` with keys `{"response", "sources", "metadata"}`
    - Answer location: `result["response"]`
-   - Contexts location: `result["sources"]` → each source has a `.text` field
+   - Contexts location: `result["sources"]` — each source has a `.text` field
 
 ### Phase 2 — Choose the Adapter Form
 
 Based on what you discovered in Phase 1, pick the right adapter form:
 
 | Situation | Adapter Form | Template |
-|---|---|---|
-| You can import the RAG function directly in Python | **Python Callable** | `templates/python_adapter.py` |
-| The RAG system is behind an HTTP API | **HTTP Endpoint** | `templates/http_adapter.py` |
-| The RAG system is a CLI tool or subprocess | **Shell** | `templates/shell_adapter.py` |
+| :--- | :--- | :--- |
+| You can import the RAG function directly in Python | Python Callable | `templates/python_adapter.py` |
+| The RAG system is behind an HTTP API | HTTP Endpoint | `templates/http_adapter.py` |
+| The RAG system is a CLI tool or subprocess | Shell | `templates/shell_adapter.py` |
 
 **Decision guide:**
-- Prefer **Python Callable** when possible — it's the fastest and simplest.
+- Prefer **Python Callable** when possible — it is the fastest and simplest.
 - Use **HTTP** when the RAG app runs as a separate service (e.g., FastAPI,
   Flask, or any REST API).
 - Use **Shell** when the RAG app is invoked as a command-line tool.
@@ -103,17 +102,17 @@ Based on what you discovered in Phase 1, pick the right adapter form:
 
 2. **Fill in the placeholders** based on Phase 1 findings:
 
-#### For Python Callable Adapter:
+#### Python Callable Adapter
 
 ```python
 # ragsentry_adapter.py
-from myapp.rag_pipeline import ask  # <-- real import
+from myapp.rag_pipeline import ask  # real import
 
 def query(question: str) -> dict[str, Any]:
-    result = ask(question)  # <-- real function call
+    result = ask(question)  # real function call
     return {
-        "answer": result["response"],        # <-- real answer key
-        "contexts": [s.text for s in result["sources"]],  # <-- real contexts
+        "answer": result["response"],               # real answer key
+        "contexts": [s.text for s in result["sources"]],  # real contexts
     }
 ```
 
@@ -122,7 +121,7 @@ Then test with:
 ragsentry run -e evalset.jsonl -a ragsentry_adapter:query
 ```
 
-#### For HTTP Adapter:
+#### HTTP Adapter
 
 ```bash
 # No adapter file needed — use the built-in HTTP adapter:
@@ -136,7 +135,7 @@ ragsentry run -e evalset.jsonl \
 If the response shape is complex (e.g., contexts are nested objects), create a
 thin wrapper adapter using `templates/http_adapter.py`.
 
-#### For Shell Adapter:
+#### Shell Adapter
 
 ```bash
 # No adapter file needed — use the built-in shell adapter:
@@ -172,7 +171,7 @@ The shell command receives the question on stdin and must print JSON
 ## Common Pitfalls
 
 | Problem | Fix |
-|---|---|
+| :--- | :--- |
 | Contexts are objects, not strings | Map them: `[c.page_content for c in raw_contexts]` or `[c["text"] for c in raw_contexts]` |
 | Function returns a Pydantic model | Call `.model_dump()` or access attributes directly |
 | RAG function is async | Wrap with `asyncio.run()` in the adapter |
@@ -183,10 +182,11 @@ The shell command receives the question on stdin and must print JSON
 
 ## Validation Checklist
 
-Before declaring the adapter done, verify:
+Before declaring the adapter complete, verify:
 
 - [ ] `query("any question")` returns `{"answer": str, "contexts": list[str]}`
 - [ ] Contexts are **strings** (not dicts, not objects)
 - [ ] The function is importable via dotted path (e.g., `ragsentry_adapter:query`)
 - [ ] `ragsentry run -e evalset.jsonl -a <dotted_path>:query` completes without errors
 - [ ] The generated `runs/*.json` file contains scores for all questions
+

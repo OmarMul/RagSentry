@@ -1,32 +1,40 @@
-# Installing the Adapter Scaffolder Agent Skill
+# Agent Skill Installation
 
-RagSentry includes an AI coder skill called **`adapter-scaffolder`** designed to help AI coding assistants (such as Antigravity, AGY, Claude Code, Cursor, Windsurf, etc.) inspect an unfamiliar RAG codebase, locate retrieval entrypoints, and automatically generate a working `ragsentry_adapter.py`.
+RagSentry includes a skill called **`adapter-scaffolder`** designed to help AI coding assistants (Antigravity, AGY, Claude Code, Cursor, Windsurf, and others) inspect an unfamiliar RAG codebase, locate the retrieval entry point, and automatically generate a working `ragsentry_adapter.py`.
 
 ---
 
-## Method 1 — Quick Install via RagSentry CLI (Recommended)
+## Table of Contents
 
-Once RagSentry is installed (`pip install ragsentry`), run the skill installer directly:
+- [Method 1: Install via RagSentry CLI (Recommended)](#method-1-install-via-ragsentry-cli-recommended)
+- [Method 2: Manual Repository Copy](#method-2-manual-repository-copy)
+- [How Agents Use the Skill](#how-agents-use-the-skill)
 
-### 1. Install into your project workspace (Default)
+---
+
+## Method 1: Install via RagSentry CLI (Recommended)
+
+Once RagSentry is installed (`pip install ragsentry`), run the skill installer directly from your project root.
+
+### Install into your workspace (default)
 
 ```bash
-# Installs to .agents/skills/adapter-scaffolder (Antigravity / AGY / Standard agents)
+# Installs to .agents/skills/adapter-scaffolder
 ragsentry install-skill
 ```
 
-or using the `skill` subgroup:
+The `skill install` subcommand is an alias for the same operation:
 
 ```bash
 ragsentry skill install
 ```
 
-### 2. Install for specific AI Coder Agents
+### Install for a specific agent
 
-Select your agent framework using the `--agent` (`-a`) option:
+Use the `--agent` (`-a`) flag to target a specific agent's configuration directory:
 
 ```bash
-# Antigravity / AGY / Standard agents (.agents/skills/adapter-scaffolder)
+# Antigravity / AGY (.agents/skills/adapter-scaffolder)
 ragsentry install-skill --agent antigravity
 
 # Claude Code (.claude/skills/adapter-scaffolder)
@@ -39,17 +47,17 @@ ragsentry install-skill --agent cursor
 ragsentry install-skill --agent windsurf
 ```
 
-### 3. Global Installation across all projects
+### Install globally
 
-Install into your home directory so your agent can use the skill in any workspace:
+Install into your home directory so the skill is available in every workspace:
 
 ```bash
 ragsentry install-skill --global
 ```
 
-### 4. Custom Destination Path
+### Install to a custom path
 
-Specify an explicit path:
+Specify an explicit destination directory:
 
 ```bash
 ragsentry install-skill --target-dir ./my-agent-skills/adapter-scaffolder
@@ -57,30 +65,35 @@ ragsentry install-skill --target-dir ./my-agent-skills/adapter-scaffolder
 
 ---
 
-## Method 2 — Direct Repository Copy / Git Clone
+## Method 2: Manual Repository Copy
 
-If you want to install the skill manually without running `pip install ragsentry`:
+If you want to install the skill without running `pip install ragsentry`:
 
 1. Clone or download the `skills/adapter-scaffolder` directory from the [RagSentry repository](https://github.com/OmarMul/RagSentry).
-2. Copy `skills/adapter-scaffolder` into your agent's skill directory:
+2. Copy it into your agent's skill directory:
 
 ```bash
-# For Antigravity / AGY agents:
+# For Antigravity / AGY
 mkdir -p .agents/skills
 cp -r skills/adapter-scaffolder .agents/skills/
 
-# For Claude Code:
+# For Claude Code
 mkdir -p .claude/skills
 cp -r skills/adapter-scaffolder .claude/skills/
 ```
 
 ---
 
-## How Coder Agents Use the Skill
+## How Agents Use the Skill
 
-When installed, your AI coding assistant will follow the 4-phase procedure defined in `SKILL.md`:
+When the skill is installed, your AI coding assistant reads `SKILL.md` and follows a four-phase procedure:
 
-1. **Phase 1 — Discovery:** Scans your codebase for retrieval patterns (`retrieve`, `search`, `query`, `embedding`, `vector`).
-2. **Phase 2 — Adapter Form Selection:** Chooses between **Python Callable**, **HTTP Endpoint**, or **Shell Subprocess**.
-3. **Phase 3 — Scaffolding:** Fills in the appropriate starter template from `templates/` and generates `ragsentry_adapter.py`.
-4. **Phase 4 — Verification:** Executes a smoke test (`ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring`) to confirm contract compliance.
+| Phase | Name | Description |
+| :---: | :--- | :--- |
+| 1 | Discovery | Scans the codebase for retrieval patterns (`retrieve`, `search`, `query`, `embedding`, `vector`) to locate the RAG entry point. |
+| 2 | Adapter Form Selection | Chooses between Python Callable, HTTP Endpoint, or Shell Subprocess based on how the RAG system is exposed. |
+| 3 | Scaffolding | Fills in the appropriate template from `templates/` and writes `ragsentry_adapter.py`. |
+| 4 | Verification | Runs a smoke test (`ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring`) to confirm contract compliance. |
+
+See the [Adapter Scaffolder Skill specification](../skills/adapter-scaffolder/SKILL.md) for the full procedure the agent follows.
+

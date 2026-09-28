@@ -1,36 +1,50 @@
-# RagSentry — pytest for RAG
+# RagSentry
 
-> **Regression testing and evaluation CLI for Retrieval-Augmented Generation (RAG) systems.**
+**Regression testing and evaluation CLI for Retrieval-Augmented Generation (RAG) systems.**
 
-RagSentry connects to your RAG application through a thin adapter, evaluates retrieved contexts and generated answers against your dataset, tracks runs over time, diffs runs to catch regressions, and gates CI builds.
+RagSentry connects to your RAG application through a thin adapter, evaluates retrieved contexts and generated answers against a dataset, tracks runs over time, diffs runs to catch regressions, and gates CI builds.
 
 ---
 
-## 🚀 Quickstart in 5 Minutes
+## Table of Contents
 
-### 1. Install RagSentry
+- [Installation](#installation)
+- [Quickstart](#quickstart)
+- [Key Features](#key-features)
+- [Agent Skill: Adapter Scaffolder](#agent-skill-adapter-scaffolder)
+- [Documentation](#documentation)
+- [License](#license)
+
+---
+
+## Installation
 
 ```bash
 pip install ragsentry
 ```
 
-*(Optional PostgreSQL storage support: `pip install ragsentry[postgres]`)*
+Optional PostgreSQL storage support:
+
+```bash
+pip install "ragsentry[postgres]"
+```
 
 ---
 
-### 2. Initialize RagSentry in your project
+## Quickstart
+
+### 1. Initialize the project
 
 ```bash
 ragsentry init
 ```
 
-This scaffolds:
-- `ragsentry_adapter.py` — starter adapter stub
-- `evalset.jsonl` — starter evaluation set
+This scaffolds two files in the current directory:
 
----
+- `ragsentry_adapter.py` — a starter adapter stub
+- `evalset.jsonl` — a starter evaluation dataset
 
-### 3. Connect your RAG application
+### 2. Connect your RAG application
 
 Edit `ragsentry_adapter.py` to call your RAG pipeline and return the required contract:
 
@@ -45,30 +59,32 @@ def query(question: str) -> dict:
     }
 ```
 
----
+See the [Adapter Contract Guide](docs/adapter-contract.md) for all supported adapter forms (Python callable, HTTP endpoint, shell subprocess).
 
-### 4. Run an Evaluation
+### 3. Run an evaluation
 
-#### Unscored Generation Pass (No LLM required):
+Unscored generation pass (no LLM required):
+
 ```bash
 ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring
 ```
 
-#### Full Evaluation with LLM Judge:
+Full evaluation with an LLM judge:
+
 ```bash
-ragsentry run -e evalset.jsonl -a ragsentry_adapter:query -p openrouter -m openai/gpt-oss-120b
+ragsentry run -e evalset.jsonl -a ragsentry_adapter:query -p openrouter -m openai/gpt-4o
 ```
 
----
+### 4. Diff runs and gate CI
 
-### 5. Diff Runs & Gate CI
+Diff two evaluation runs:
 
-#### Diff two evaluation runs:
 ```bash
 ragsentry diff run_2026-09-27T10-00-00_a1b2c3d4.json run_2026-09-27T11-00-00_e5f6g7h8.json
 ```
 
-#### Quality Gate in CI (Exit code 0 on pass, non-zero on failure):
+Quality gate in CI (exit code `0` on pass, non-zero on failure):
+
 ```bash
 ragsentry ci \
   --candidate <candidate_run_id> \
@@ -81,48 +97,52 @@ ragsentry ci \
 
 ---
 
-## ⚡ Key Features
+## Key Features
 
-- 🔌 **Plug-and-Play Adapters:** Supports Python callables (`pkg.mod:func`), REST APIs (`http://localhost:8000/query`), or CLI tools (`shell:python rag_cli.py`).
-- 🤖 **Provider-Agnostic Judge Scoring:** Works with OpenAI, Anthropic, Gemini, Groq, xAI, Ollama, DeepSeek, OpenRouter, or custom OpenAI-compatible endpoints.
-- 💾 **Dual Storage Backends:** Local JSON file store or PostgreSQL (`--storage postgresql://...`).
-- 📊 **Rich Terminal Diffs:** Colorized diff tables highlighting improved, regressed, and unchanged questions per metric.
-- 🚦 **CI Quality Gates:** Strict threshold enforcement and regression limits with exportable GitHub PR Markdown summaries.
-- 🧩 **Agent-Usable Scaffolder Skill:** Includes `skills/adapter-scaffolder` so AI coding assistants can inspect unfamiliar RAG repos and scaffold adapters automatically.
+- **Plug-and-Play Adapters.** Supports Python callables (`pkg.mod:func`), REST APIs (`http://localhost:8000/query`), and CLI tools (`shell:python rag_cli.py`).
+- **Provider-Agnostic Judge Scoring.** Works with OpenAI, Anthropic, Gemini, Groq, xAI, Ollama, DeepSeek, OpenRouter, or any custom OpenAI-compatible endpoint.
+- **Dual Storage Backends.** Local JSON file store or PostgreSQL (`--storage postgresql://...`).
+- **Rich Terminal Diffs.** Colorized diff tables highlighting improved, regressed, and unchanged questions per metric.
+- **CI Quality Gates.** Strict threshold enforcement and regression limits with exportable GitHub PR Markdown summaries.
+- **Agent-Usable Scaffolder Skill.** Includes `skills/adapter-scaffolder` so AI coding assistants can inspect unfamiliar RAG repositories and scaffold adapters automatically.
 
 ---
 
-## 🤖 Install Adapter Scaffolder Skill for AI Coder Agents
+## Agent Skill: Adapter Scaffolder
 
-Have an AI coding assistant (Antigravity, Claude Code, Cursor, Windsurf)? Install the `adapter-scaffolder` skill into your agent's configuration with a single command:
+RagSentry ships a skill file (`skills/adapter-scaffolder/SKILL.md`) that AI coding assistants can read to automatically inspect an unfamiliar RAG codebase and generate a working `ragsentry_adapter.py`.
+
+Install the skill into your agent's configuration with a single command:
 
 ```bash
 # Install to local workspace (.agents/skills/adapter-scaffolder)
 ragsentry install-skill
 
-# Or install for specific agents:
+# Install for a specific agent
 ragsentry install-skill --agent claude
 ragsentry install-skill --agent cursor
 ragsentry install-skill --agent windsurf
 
-# Global install across all workspace projects:
+# Global install (available across all workspaces)
 ragsentry install-skill --global
 ```
 
-See [Agent Skill Installation Guide](docs/agent-skill-installation.md) for full details.
+See the [Agent Skill Installation Guide](docs/agent-skill-installation.md) for full details.
 
 ---
 
-## 📖 Documentation & Guides
+## Documentation
 
-- 📘 [Adapter Contract Guide](docs/adapter-contract.md)
-- 📙 [CI / CD Integration Guide](docs/ci-integration.md)
-- 📗 [Configuration Reference](docs/config-reference.md)
-- 💡 [Agent Skill Installation Guide](docs/agent-skill-installation.md)
-- 📕 [Adapter Scaffolder Skill Specification](skills/adapter-scaffolder/SKILL.md)
+| Guide | Description |
+| :--- | :--- |
+| [Adapter Contract](docs/adapter-contract.md) | Supported adapter forms and their required contracts |
+| [CI/CD Integration](docs/ci-integration.md) | GitHub Actions, GitLab CI, and generic pipeline setup |
+| [Configuration Reference](docs/config-reference.md) | Judge providers, storage backends, and all CLI options |
+| [Agent Skill Installation](docs/agent-skill-installation.md) | Installing the adapter scaffolder skill for AI agents |
+| [Adapter Scaffolder Skill](skills/adapter-scaffolder/SKILL.md) | The skill specification read by AI coding assistants |
 
 ---
 
-## 📜 License
+## License
 
-MIT License.
+MIT. See [LICENSE](LICENSE) for details.

@@ -1,48 +1,59 @@
-# CI/CD Integration Guide: "pytest for RAG"
+# CI/CD Integration
 
-**RagSentry** acts as an automated regression-testing and evaluation gate in your Continuous Integration (CI) pipelines. Just as `pytest` fails your build on broken unit tests, `ragsentry ci` fails your build on quality regressions, hallucination spikes, or retrieval degradation.
+**RagSentry** acts as an automated regression-testing and evaluation gate in Continuous Integration pipelines. Just as `pytest` fails a build on broken unit tests, `ragsentry ci` fails a build on quality regressions, hallucination spikes, or retrieval degradation.
 
 ---
 
-## 1. Core Concepts & Exit Codes
+## Table of Contents
 
-`ragsentry ci` is CI-provider-agnostic:
-- **Exit Code `0`**: The quality gate **PASSED** (all thresholds met, no unacceptable regressions).
-- **Exit Code `1`**: The quality gate **FAILED** (one or more metrics breached thresholds or regressed).
+- [Core Concepts and Exit Codes](#1-core-concepts-and-exit-codes)
+- [Command Line Reference](#2-command-line-reference)
+- [GitHub Actions Integration](#3-github-actions-integration)
+- [Comparing Against a Stored Baseline](#4-comparing-against-a-stored-baseline)
+- [GitLab CI and Generic Pipelines](#5-gitlab-ci-and-generic-pipelines)
+- [Best Practices](#6-best-practices)
 
-It supports two gating modes (which can be used together):
+---
+
+## 1. Core Concepts and Exit Codes
+
+`ragsentry ci` is CI-provider-agnostic and communicates results exclusively through exit codes and an optional Markdown report file:
+
+- **Exit code `0`**: The quality gate passed — all thresholds met, no unacceptable regressions.
+- **Exit code `1`**: The quality gate failed — one or more metrics breached thresholds or regressed.
+
+Two gating modes are supported and can be combined:
+
 1. **Absolute Threshold Gating**: Ensures metrics meet a minimum acceptable standard (e.g., `faithfulness >= 0.85`).
-2. **Baseline Regression Gating**: Compares the current PR against a stored baseline run (e.g., from `main` or production) to ensure recent changes didn't degrade existing capabilities.
+2. **Baseline Regression Gating**: Compares the current run against a stored baseline run (e.g., from `main` or production) to ensure recent changes did not degrade existing capabilities.
 
 ---
 
 ## 2. Command Line Reference
 
-```powershell
+```bash
 ragsentry ci [OPTIONS]
 ```
 
-### Options
-
-| Option | Shorthand | Description | Example |
+| Option | Short | Description | Example |
 | :--- | :--- | :--- | :--- |
 | `--candidate` | `-c` | **(Required)** Path to the candidate evaluation run JSON file. | `-c runs/candidate.json` |
 | `--baseline` | `-b` | Path to a baseline evaluation run JSON file to compare against. | `-b runs/baseline.json` |
 | `--threshold` | `-t` | Minimum acceptable score for a metric. Repeatable. | `-t faithfulness=0.85 -t answer_relevancy=0.80` |
-| `--max-regression` | | Maximum allowable drop in any average metric vs baseline. | `--max-regression 0.05` |
-| `--max-regressed-questions` | | Max allowed count of individual questions that regressed. Default: `0`. | `--max-regressed-questions 0` |
-| `--pr-comment-out` | | Output file path to write the formatted Markdown report. | `--pr-comment-out pr_comment.md` |
+| `--max-regression` | | Maximum allowable drop in any average metric vs. baseline. | `--max-regression 0.05` |
+| `--max-regressed-questions` | | Maximum allowed count of individual questions that regressed. Default: `0`. | `--max-regressed-questions 0` |
+| `--pr-comment-out` | | Output file path for the formatted Markdown report. | `--pr-comment-out pr_comment.md` |
 
 ---
 
 ## 3. GitHub Actions Integration
 
-### Complete Workflow (`.github/workflows/ragsentry.yml`)
+### Complete workflow (`.github/workflows/ragsentry.yml`)
 
 The following workflow:
 1. Runs evaluation against your RAG adapter.
 2. Evaluates the run with `ragsentry ci`.
-3. Displays the full report in the **GitHub Job Summary**.
+3. Displays the full report in the GitHub Job Summary.
 4. Automatically posts or updates a comment on the Pull Request.
 
 ```yaml
@@ -59,7 +70,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write # Required if posting PR comments
+      pull-requests: write # Required for posting PR comments
 
     steps:
       - name: Checkout Code
@@ -77,7 +88,6 @@ jobs:
 
       - name: Run RAG Evaluation
         env:
-          # Use your preferred judge provider key stored in GitHub Secrets
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -125,8 +135,8 @@ jobs:
 
 To catch regressions against `main`:
 
-1. Store the latest run from `main` in your repository or as a GitHub Actions Cache / Artifact.
-2. In the PR workflow, pass both the candidate and the baseline:
+1. Store the latest run from `main` in your repository or as a GitHub Actions cache artifact.
+2. Pass both the candidate and the baseline to `ragsentry ci`:
 
 ```bash
 ragsentry ci \
@@ -138,15 +148,15 @@ ragsentry ci \
   --pr-comment-out pr_comment.md
 ```
 
-If the candidate score drops by more than `0.05` on any metric, or if any question regresses, the command exits with code `1` and highlights the regressed questions in the report.
+If the candidate score drops by more than `0.05` on any metric, or if any individual question regresses, the command exits with code `1` and highlights the affected questions in the report.
 
 ---
 
-## 5. GitLab CI / Bitbucket / Generic Pipelines
+## 5. GitLab CI and Generic Pipelines
 
-Because `ragsentry ci` uses standard exit codes and outputs Markdown to a file, it works out of the box in any CI engine.
+Because `ragsentry ci` uses standard exit codes and writes output to a plain Markdown file, it integrates with any CI engine.
 
-### Example for GitLab CI (`.gitlab-ci.yml`)
+### Example: GitLab CI (`.gitlab-ci.yml`)
 
 ```yaml
 stages:
@@ -169,8 +179,11 @@ rag_gate:
 
 ---
 
-## 6. Recommended Best Practices
+## 6. Best Practices
 
-1. **Keep Golden Eval Sets Lean**: In CI, run a focused "smoke" eval set (15–30 questions) so your CI pipeline finishes in under 2 minutes. Reserve larger benchmarks (100–500 questions) for nightly builds.
-2. **Store API Keys Securely**: Always inject your judge API key (`GEMINI_API_KEY`, `OPENROUTER_API_KEY`, etc.) through encrypted CI repository secrets.
-3. **Inspect Collapsible Details**: When a build fails, click the **"View Per-Question Details"** dropdown in your PR comment to pinpoint which specific questions lost retrieval context or hallucinated.
+| Practice | Recommendation |
+| :--- | :--- |
+| **Keep eval sets lean for CI** | Use a focused smoke set of 15–30 questions in CI so the pipeline finishes in under 2 minutes. Reserve larger benchmarks (100–500 questions) for nightly builds. |
+| **Store API keys securely** | Inject judge API keys (`GEMINI_API_KEY`, `OPENROUTER_API_KEY`, etc.) through encrypted CI repository secrets. Never commit keys to source control. |
+| **Inspect per-question details** | When a build fails, expand the collapsible details in your PR comment to identify which specific questions lost retrieval context or produced hallucinated answers. |
+
