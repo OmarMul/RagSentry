@@ -189,4 +189,3 @@ Before declaring the adapter complete, verify:
 - [ ] The function is importable via dotted path (e.g., `ragsentry_adapter:query`)
 - [ ] `ragsentry run -e evalset.jsonl -a <dotted_path>:query` completes without errors
 - [ ] The generated `runs/*.json` file contains scores for all questions
-

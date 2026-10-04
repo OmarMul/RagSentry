@@ -1,2 +1,4 @@
 graft skills
 recursive-include skills *
+graft ragsentry/skills
+recursive-include ragsentry/skills *

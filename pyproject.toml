@@ -39,9 +39,6 @@ ragsentry = "ragsentry.cli:main"
 where = ["."]
 include = ["ragsentry*"]
 
-[tool.setuptools.package-dir]
-"ragsentry.skills" = "skills"
-
 [tool.setuptools.package-data]
-"ragsentry.skills" = ["*", "**/*", "templates/*"]
+"ragsentry" = ["skills/**/*"]
 
