@@ -1,10 +1,10 @@
 ---
 name: adapter-scaffolder
 description: >
-  Step-by-step procedure for an AI coding assistant to install RagSentry,
-  inspect an unfamiliar RAG codebase, locate the retrieval call site, and
-  scaffold a working RagSentry adapter file. Works for Python callable, HTTP
-  endpoint, and shell/subprocess adapter forms.
+  Step-by-step procedure for an AI coding assistant to inspect an unfamiliar RAG
+  codebase, locate the retrieval call site, and scaffold a working RagSentry
+  adapter file. Works for Python callable, HTTP endpoint, and shell/subprocess
+  adapter forms.
 ---
 
 # Adapter Scaffolder Skill
@@ -14,11 +14,12 @@ description: >
 You are helping a developer connect their existing RAG application to RagSentry
 for evaluation and regression testing. Your job is to:
 
-1. **Install** RagSentry if not already present.
-2. **Inspect** the target codebase to find where retrieval and answer generation happen.
-3. **Identify** the function signature, return shape, and how `answer` and
+1. **Inspect** the target codebase to find where retrieval and answer generation
+   happen.
+2. **Identify** the function signature, return shape, and how `answer` and
    `contexts` (retrieved passages) are produced.
-4. **Scaffold** a working adapter file that conforms to the RagSentry adapter contract.
+3. **Scaffold** a working adapter file that conforms to the RagSentry adapter
+   contract.
 
 The adapter contract requires a function with this signature:
 
@@ -27,100 +28,9 @@ def query(question: str) -> dict[str, Any]:
     """Must return {"answer": str, "contexts": list[str], ...}"""
 ```
 
----
-
-## RagSentry Reference
-
-### Installation
-
-```bash
-pip install ragsentry
-```
-
-Optional PostgreSQL storage support:
-
-```bash
-pip install "ragsentry[postgres]"
-```
-
-### Quickstart
-
-#### 1. Initialize the project
-
-```bash
-ragsentry init
-```
-
-This scaffolds two files in the current directory:
-- `ragsentry_adapter.py` — a starter adapter stub
-- `evalset.jsonl` — a starter evaluation dataset
-
-#### 2. Connect your RAG application
-
-Edit `ragsentry_adapter.py` to call your RAG pipeline and return the required contract:
-
-```python
-from my_rag_app import ask_rag
-
-def query(question: str) -> dict:
-    result = ask_rag(question)
-    return {
-        "answer": result["answer"],
-        "contexts": result["contexts"],  # list[str] of retrieved passages
-    }
-```
-
-#### 3. Run an evaluation
-
-Unscored generation pass (no LLM required):
-
-```bash
-ragsentry run -e evalset.jsonl -a ragsentry_adapter:query --no-scoring
-```
-
-Full evaluation with an LLM judge:
-
-```bash
-ragsentry run -e evalset.jsonl -a ragsentry_adapter:query -p openrouter -m openai/gpt-4o
-```
-
-Supported providers: `openai`, `anthropic`, `gemini`, `groq`, `xai`, `ollama`, `deepseek`, `openrouter`, or any OpenAI-compatible endpoint.
-
-#### 4. Diff runs and gate CI
-
-Diff two evaluation runs:
-
-```bash
-ragsentry diff run_2026-09-27T10-00-00_a1b2c3d4.json run_2026-09-27T11-00-00_e5f6g7h8.json
-```
-
-Quality gate in CI (exit code `0` on pass, non-zero on failure):
-
-```bash
-ragsentry ci \
-  --candidate <candidate_run_id> \
-  --baseline <baseline_run_id> \
-  -t faithfulness=0.80 \
-  -t context_recall=0.85 \
-  --max-regressed-questions 1 \
-  --pr-comment-out pr_comment.md
-```
-
-### Key Adapter Forms
-
-| Form | Example CLI flag | When to use |
-| :--- | :--- | :--- |
-| Python callable | `-a ragsentry_adapter:query` | Can import RAG function directly |
-| HTTP endpoint | `-a "http://localhost:8000/query"` | RAG runs as a separate service |
-| Shell subprocess | `-a "shell:python rag_cli.py"` | RAG is a CLI tool |
-
----
-
 ## Prerequisites
 
-Before starting, confirm:
-
-- RagSentry is installed (`pip install ragsentry`)
+- The user has RagSentry installed (`pip install ragsentry`)
 - The user has a RAG application they want to evaluate
 - You have access to the target codebase's source files
 
@@ -274,8 +184,6 @@ The shell command receives the question on stdin and must print JSON
 
 Before declaring the adapter complete, verify:
 
-- [ ] RagSentry is installed (`pip show ragsentry` returns version info)
-- [ ] `ragsentry init` has been run (or `ragsentry_adapter.py` and `evalset.jsonl` exist)
 - [ ] `query("any question")` returns `{"answer": str, "contexts": list[str]}`
 - [ ] Contexts are **strings** (not dicts, not objects)
 - [ ] The function is importable via dotted path (e.g., `ragsentry_adapter:query`)
